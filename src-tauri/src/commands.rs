@@ -1,6 +1,7 @@
 use tauri::State;
 
 use crate::config::Config;
+use crate::passwords::{Password, Passwords};
 use crate::vault::{Vault, VaultError};
 
 #[tauri::command]
@@ -45,4 +46,36 @@ pub fn rename_vault(
 ) -> Result<Vault, VaultError> {
     let config = state.inner();
     Vault::rename(config, &name, &new_name)
+}
+
+#[tauri::command]
+pub fn add_password(
+    state: State<Config>,
+    name: String,
+    masterkey: String,
+    password: String,
+    notes: String,
+) -> Result<(), VaultError> {
+    Ok(())
+    // Implementation to add new password
+}
+
+#[tauri::command]
+pub fn delete_password(
+    state: State<Config>,
+    name: String,
+    masterkey: String,
+    index: usize,
+) -> Result<(), VaultError> {
+    Ok(())
+    // Implementation to delete password at index
+}
+
+#[tauri::command]
+pub fn get_passwords(
+    state: State<Config>,
+    name: String,
+    masterkey: String,
+) -> Result<Vec<Password>, VaultError> {
+    Ok(Vec::new())
 }
