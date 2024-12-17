@@ -1,4 +1,4 @@
-use self::commands::{create_vault, delete_vault, list_vaults, rename_vault};
+use self::commands::{create_vault, delete_vault, list_vaults, rename_vault, update_vault};
 use self::config::Config;
 use snafu::{ResultExt, Whatever};
 use tauri::Manager;
@@ -31,6 +31,7 @@ pub fn run() -> Result<(), Whatever> {
             list_vaults,
             create_vault,
             delete_vault,
+            update_vault,
             rename_vault
         ])
         .run(tauri::generate_context!())

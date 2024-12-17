@@ -1,9 +1,9 @@
-use borsh::BorshSerialize;
+use borsh::{BorshDeserialize, BorshSerialize};
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
-use snafu::{Location, ResultExt, Snafu};
+use snafu::{Location, Snafu};
 use std::fs::{self, File};
-use std::io::BufWriter;
+use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
 use tauri::ipc::InvokeError;
 
@@ -41,6 +41,14 @@ pub enum VaultError {
         location: Location,
     },
 
+    #[snafu(display("Cipher Error"))]
+    #[snafu(context(false))]
+    Cipher {
+        source: CipherError,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
     #[snafu(display("Vault file '{:?}' already exists", path))]
     VaultFileExists { path: PathBuf },
 
@@ -62,9 +70,6 @@ pub enum VaultError {
     #[snafu(display("Vault name cannot be empty"))]
     NameEmpty,
 
-    #[snafu(display("Cipher Error"))]
-    Cipher { source: CipherError },
-
     #[snafu(display("Failed to get app directory"))]
     AppDirAccess,
 }
@@ -76,24 +81,27 @@ impl From<VaultError> for InvokeError {
 }
 
 impl Vault {
-    pub fn new(name: String, masterkey: String, config: &Config) -> Result<Self, VaultError> {
-        Self::validate_masterkey(&masterkey)?;
+    pub fn new(config: &Config, name: &str, masterkey: &str) -> Result<Self, VaultError> {
+        let name = name.trim();
+        Self::validate_name(name)?;
+        Self::validate_masterkey(masterkey)?;
 
         // Create empty encrypted vault content
-        let pwd_path = Self::get_pwd_path(&name, config);
+        let pwd_path = Self::get_pwd_path(config, name);
         Self::validate_path_not_exist(&pwd_path)?;
 
-        let cipher = Cipher::new(masterkey.to_string());
+        let cipher = Cipher::new(masterkey);
         let file = File::create(pwd_path)?;
         let mut writer = BufWriter::new(file);
-        cipher
-            .dump(Passwords::random().try_to_vec()?, &mut writer)
-            .context(CipherSnafu)?;
+        cipher.dump(Passwords::empty().try_to_vec()?, &mut writer)?;
 
         // Get or create metadata
-        let metadata = Self::get_metadata(&name, config)?;
+        let metadata = Self::get_or_create_metadata(config, name)?;
 
-        Ok(Vault { name, metadata })
+        Ok(Vault {
+            name: name.to_string(),
+            metadata,
+        })
     }
 
     pub fn list(config: &Config) -> Result<Vec<Self>, VaultError> {
@@ -105,8 +113,8 @@ impl Vault {
             .filter(|name| name.ends_with(".pwd"))
             .flat_map(|name| {
                 let end_index = name.len() - 4;
-                let name = String::from(&name[..end_index]);
-                Vault::from_name(name, config).ok()
+                let name = &name[..end_index];
+                Vault::from_name(config, name).ok()
             })
             .collect();
 
@@ -114,17 +122,75 @@ impl Vault {
         Ok(vaults)
     }
 
-    fn from_name(name: String, config: &Config) -> Result<Self, VaultError> {
-        let metadata = Self::get_metadata(&name, config)?;
+    pub fn delete(config: &Config, name: &str) -> Result<(), VaultError> {
+        let pwd_path = Self::get_pwd_path(config, name);
+        let meta_path = Self::get_meta_path(config, name);
 
-        Ok(Vault { name, metadata })
+        if pwd_path.exists() {
+            fs::remove_file(&pwd_path)?;
+        }
+
+        if meta_path.exists() {
+            fs::remove_file(&meta_path)?;
+        }
+        Ok(())
     }
 
-    fn get_metadata(name: &str, config: &Config) -> Result<VaultMetadata, VaultError> {
-        let pwd_path = Self::get_pwd_path(name, config);
+    pub fn update(
+        config: &Config,
+        name: &str,
+        old_masterkey: &str,
+        new_masterkey: &str,
+    ) -> Result<(), VaultError> {
+        Self::validate_masterkey(new_masterkey)?;
+
+        let old_cipher = Cipher::new(old_masterkey);
+        let pwd_path = Self::get_pwd_path(config, name);
+        let file = File::open(pwd_path)?;
+        let mut reader = BufReader::new(file);
+        let encoded = old_cipher.parse(&mut reader)?;
+        let decoded = Passwords::try_from_slice(&encoded)?;
+
+        let new_cipher = Cipher::new(new_masterkey);
+        let pwd_path = Self::get_pwd_path(config, name);
+        let file = File::create(pwd_path)?;
+        let mut writer = BufWriter::new(file);
+        new_cipher.dump(decoded.try_to_vec()?, &mut writer)?;
+
+        Ok(())
+    }
+
+    pub fn rename(config: &Config, name: &str, new_name: &str) -> Result<Vault, VaultError> {
+        let new_name = new_name.trim();
+        Self::validate_name(new_name)?;
+
+        let old_pwd_path = Self::get_pwd_path(config, name);
+        let new_pwd_path = Self::get_pwd_path(config, new_name);
+        let old_meta_path = Self::get_meta_path(config, name);
+        let new_meta_path = Self::get_meta_path(config, new_name);
+
+        // Rename the file
+        fs::rename(&old_pwd_path, &new_pwd_path)?;
+        fs::rename(&old_meta_path, &new_meta_path)?;
+
+        Vault::from_name(config, new_name)
+    }
+
+    fn from_name(config: &Config, name: &str) -> Result<Self, VaultError> {
+        Self::validate_name(name)?;
+        let metadata = Self::get_or_create_metadata(config, name)?;
+
+        Ok(Vault {
+            name: name.to_string(),
+            metadata,
+        })
+    }
+
+    fn get_or_create_metadata(config: &Config, name: &str) -> Result<VaultMetadata, VaultError> {
+        let pwd_path = Self::get_pwd_path(config, name);
         Self::validate_path_exist(&pwd_path)?;
 
-        let meta_path = Self::get_meta_path(name, config);
+        let meta_path = Self::get_meta_path(config, name);
         if meta_path.exists() {
             let file = File::open(meta_path)?;
             let metadata = serde_json::from_reader(file)?;
@@ -132,7 +198,7 @@ impl Vault {
             Ok(metadata)
         } else {
             let now = Local::now();
-            let metadata_path = Self::get_meta_path(name, config);
+            let metadata_path = Self::get_meta_path(config, name);
             let metadata = VaultMetadata {
                 created_at: now,
                 last_accessed: now,
@@ -144,11 +210,11 @@ impl Vault {
         }
     }
 
-    fn get_pwd_path(name: &str, config: &Config) -> PathBuf {
+    fn get_pwd_path(config: &Config, name: &str) -> PathBuf {
         config.app_data_dir.join(format!("{}.pwd", name))
     }
 
-    fn get_meta_path(name: &str, config: &Config) -> PathBuf {
+    fn get_meta_path(config: &Config, name: &str) -> PathBuf {
         config.app_data_dir.join(format!("{}.meta", name))
     }
 
@@ -195,35 +261,4 @@ impl Vault {
 
         Ok(())
     }
-
-    //
-    // pub fn update_last_accessed(&self) -> Result<(), VaultError> {
-    //     let vaults_dir = get_vaults_dir()?;
-    //     let vault_path = vaults_dir.join(format!("{}.pwd", self.name));
-    //     let metadata_path = Self::get_metadata_path(&vault_path);
-    //
-    //     // Read existing metadata or create new
-    //     let mut metadata = if metadata_path.exists() {
-    //         let content = fs::read_to_string(&metadata_path)
-    //             .map_err(|source| VaultError::ReadError { source })?;
-    //         serde_json::from_str(&content).map_err(|_| VaultError::MetadataSerialize)?
-    //     } else {
-    //         VaultMetadata {
-    //             created_at: Local::now(),
-    //             last_accessed: Local::now(),
-    //         }
-    //     };
-    //
-    //     // Update last_accessed
-    //     metadata.last_accessed = Local::now();
-    //
-    //     // Save updated metadata
-    //     fs::write(
-    //         &metadata_path,
-    //         serde_json::to_string(&metadata).map_err(|_| VaultError::MetadataSerialize)?,
-    //     )
-    //     .map_err(|source| VaultError::WriteError { source })?;
-    //
-    //     Ok(())
-    // }
 }

@@ -16,8 +16,10 @@ pub struct Cipher {
 }
 
 impl Cipher {
-    pub fn new(masterkey: String) -> Self {
-        Cipher { masterkey }
+    pub fn new(masterkey: &str) -> Self {
+        Cipher {
+            masterkey: masterkey.to_string(),
+        }
     }
 
     pub fn dump(&self, data: Vec<u8>, writer: &mut impl Write) -> Result<(), CipherError> {

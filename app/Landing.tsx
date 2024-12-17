@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import {
   faExclamationTriangle,
+  faKey,
   faLock,
   faPencilAlt,
   faPlus,
@@ -33,11 +34,21 @@ function Landing({ onVaultSelect }: LandingProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [newVaultName, setNewVaultName] = useState("");
-  const [newMasterkey, setNewMasterkey] = useState("");
-  const [deleteVaultName, setDeleteVaultName] = useState<string | null>(null);
+  const [createVaultName, setCreateVaultName] = useState("");
+  const [createMasterkey, setCreateMasterkey] = useState("");
+
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [updateVaultName, setUpdateVaultName] = useState("");
+  const [updateOldMasterkey, setUpdateOldMasterkey] = useState("");
+  const [updateNewMasterkey, setUpdateNewMasterkey] = useState("");
+
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
-  const [renameVaultName, setRenameVaultName] = useState<string | null>(null);
+  const [renameVaultName, setRenameVaultName] = useState("");
+  const [renameOldName, setRenameOldName] = useState("");
+  const [renameNewName, setRenameNewName] = useState("");
+
+  const [deleteVaultName, setDeleteVaultName] = useState("");
+
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -50,7 +61,6 @@ function Landing({ onVaultSelect }: LandingProps) {
       setVaults(newVaults);
     } catch (error) {
       console.error("Failed to load vaults:", error);
-      // Handle error (show notification, etc.)
     } finally {
       setIsLoading(false);
     }
@@ -60,16 +70,15 @@ function Landing({ onVaultSelect }: LandingProps) {
     try {
       setError(null);
       const newVault = await invoke<Vault>("create_vault", {
-        name: newVaultName.trim(),
-        masterkey: newMasterkey,
+        name: createVaultName,
+        masterkey: createMasterkey,
       });
       setVaults([...vaults, newVault]);
-      setNewVaultName("");
-      setNewMasterkey("");
+      setCreateVaultName("");
+      setCreateMasterkey("");
       setIsCreateModalOpen(false);
     } catch (err) {
       setError(err as string);
-      // Show error message to user
     }
   };
 
@@ -77,44 +86,63 @@ function Landing({ onVaultSelect }: LandingProps) {
     try {
       await invoke("delete_vault", { name: vaultName });
       setVaults(vaults.filter((vault) => vault.name !== vaultName));
-      setDeleteVaultName(null);
+      setDeleteVaultName("");
     } catch (error) {
       console.error("Failed to delete vault:", error);
-      // Show error message to user
+    }
+  };
+
+  const handleUpdateVault = async () => {
+    try {
+      await invoke<Vault>("update_vault", {
+        name: updateVaultName,
+        oldMasterkey: updateOldMasterkey,
+        newMasterkey: updateNewMasterkey,
+      });
+
+      setIsUpdateModalOpen(false);
+    } catch (err) {
+      setError(err as string);
     }
   };
 
   const handleRenameVault = async () => {
-    if (!renameVaultName || !newVaultName.trim()) return;
-
     try {
       const updatedVault = await invoke<Vault>("rename_vault", {
-        oldName: renameVaultName,
-        newName: newVaultName.trim(),
+        name: renameOldName,
+        newName: renameNewName,
       });
 
       setVaults(
         vaults.map((vault) =>
-          vault.name === renameVaultName ? updatedVault : vault,
+          vault.name === renameOldName ? updatedVault : vault,
         ),
       );
 
-      setRenameVaultName(null);
-      setNewVaultName("");
       setIsRenameModalOpen(false);
     } catch (err) {
       setError(err as string);
     }
   };
 
+  const openUpdateModal = (vault: Vault) => {
+    setUpdateVaultName(vault.name);
+    setUpdateNewMasterkey("");
+    setIsUpdateModalOpen(true);
+  };
+
   const openRenameModal = (vault: Vault) => {
-    setRenameVaultName(vault.name);
-    setNewVaultName(vault.name);
+    setRenameOldName(vault.name);
+    setRenameNewName("");
     setIsRenameModalOpen(true);
   };
 
   if (isLoading) {
-    return <Loading />;
+    return (
+      <div className="min-h-screen bg-white p-6">
+        <Loading />
+      </div>
+    );
   }
 
   return (
@@ -127,7 +155,9 @@ function Landing({ onVaultSelect }: LandingProps) {
             Password Vaults
           </h1>
           <button
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={() => {
+              setIsCreateModalOpen(true);
+            }}
             className="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200"
           >
             <FontAwesomeIcon icon={faPlus} />
@@ -152,13 +182,19 @@ function Landing({ onVaultSelect }: LandingProps) {
                   <h2 className="text-xl font-semibold text-gray-800">
                     {vault.name}
                   </h2>
-                </div>
-                <div className="flex gap-2">
                   <button
                     onClick={() => openRenameModal(vault)}
                     className="text-gray-400 hover:text-sky-500 transition-colors duration-200"
                   >
                     <FontAwesomeIcon icon={faPencilAlt} />
+                  </button>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => openUpdateModal(vault)}
+                    className="text-gray-400 hover:text-sky-500 transition-colors duration-200"
+                  >
+                    <FontAwesomeIcon icon={faKey} />
                   </button>
                   <button
                     onClick={() => setDeleteVaultName(vault.name)}
@@ -169,7 +205,70 @@ function Landing({ onVaultSelect }: LandingProps) {
                 </div>
               </div>
 
-              {/* Add Rename Modal */}
+              {isUpdateModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                  <div className="bg-white rounded-xl p-6 w-full max-w-md">
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-2xl font-bold text-gray-800">
+                        Update master key
+                      </h2>
+                      <button
+                        onClick={() => {
+                          setIsUpdateModalOpen(false);
+                        }}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <FontAwesomeIcon icon={faTimes} />
+                      </button>
+                    </div>
+
+                    {/* Error Message */}
+                    {error && (
+                      <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+                        {error}
+                      </div>
+                    )}
+
+                    <h2 className="font-bold text-gray-800 mb-1">
+                      Current master key
+                    </h2>
+                    <input
+                      type="password"
+                      placeholder="Enter the current master key"
+                      value={updateOldMasterkey}
+                      onChange={(e) => setUpdateOldMasterkey(e.target.value)}
+                      className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent mb-4"
+                    />
+                    <h2 className="font-bold text-gray-800 mb-1">
+                      New master key
+                    </h2>
+                    <input
+                      type="password"
+                      placeholder="Enter a new master key"
+                      value={updateNewMasterkey}
+                      onChange={(e) => setUpdateNewMasterkey(e.target.value)}
+                      className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent mb-4"
+                    />
+                    <div className="flex justify-end gap-3">
+                      <button
+                        onClick={() => {
+                          setIsUpdateModalOpen(false);
+                        }}
+                        className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleUpdateVault}
+                        className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors duration-200"
+                      >
+                        Update
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {isRenameModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
                   <div className="bg-white rounded-xl p-6 w-full max-w-md">
@@ -180,8 +279,6 @@ function Landing({ onVaultSelect }: LandingProps) {
                       <button
                         onClick={() => {
                           setIsRenameModalOpen(false);
-                          setRenameVaultName(null);
-                          setNewVaultName("");
                         }}
                         className="text-gray-400 hover:text-gray-600"
                       >
@@ -198,17 +295,15 @@ function Landing({ onVaultSelect }: LandingProps) {
 
                     <input
                       type="text"
-                      placeholder="New vault name"
-                      value={newVaultName}
-                      onChange={(e) => setNewVaultName(e.target.value)}
+                      placeholder="Enter a new vault name"
+                      value={renameNewName}
+                      onChange={(e) => setRenameNewName(e.target.value)}
                       className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent mb-4"
                     />
                     <div className="flex justify-end gap-3">
                       <button
                         onClick={() => {
                           setIsRenameModalOpen(false);
-                          setRenameVaultName(null);
-                          setNewVaultName("");
                         }}
                         className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                       >
@@ -225,8 +320,12 @@ function Landing({ onVaultSelect }: LandingProps) {
                 </div>
               )}
 
+              <p className="text-sm text-gray-500 mb-1">
+                Created: {new Date(vault.metadata.created_at).toLocaleString()}
+              </p>
               <p className="text-sm text-gray-500 mb-4">
-                Last accessed: {vault.lastAccessed}
+                Last accessed:{" "}
+                {new Date(vault.metadata.last_accessed).toLocaleString()}
               </p>
               <button
                 onClick={() => onVaultSelect(vault.name)}
@@ -247,7 +346,9 @@ function Landing({ onVaultSelect }: LandingProps) {
                   Create New Vault
                 </h2>
                 <button
-                  onClick={() => setIsCreateModalOpen(false)}
+                  onClick={() => {
+                    setIsCreateModalOpen(false);
+                  }}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <FontAwesomeIcon icon={faTimes} />
@@ -261,23 +362,27 @@ function Landing({ onVaultSelect }: LandingProps) {
                 </div>
               )}
 
+              <h2 className="font-bold text-gray-800 mb-1">Vault name</h2>
               <input
                 type="text"
-                placeholder="Vault name"
-                value={newVaultName}
-                onChange={(e) => setNewVaultName(e.target.value)}
+                placeholder="Enter a name"
+                value={createVaultName}
+                onChange={(e) => setCreateVaultName(e.target.value)}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent mb-4"
               />
+              <h2 className="font-bold text-gray-800 mb-1">Master key</h2>
               <input
-                type="text"
-                placeholder="Master key"
-                value={newMasterkey}
-                onChange={(e) => setNewMasterkey(e.target.value)}
+                type="password"
+                placeholder="Enter a master key"
+                value={createMasterkey}
+                onChange={(e) => setCreateMasterkey(e.target.value)}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent mb-4"
               />
               <div className="flex justify-end gap-3">
                 <button
-                  onClick={() => setIsCreateModalOpen(false)}
+                  onClick={() => {
+                    setIsCreateModalOpen(false);
+                  }}
                   className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                 >
                   Cancel
@@ -312,7 +417,7 @@ function Landing({ onVaultSelect }: LandingProps) {
               </p>
               <div className="flex justify-end gap-3">
                 <button
-                  onClick={() => setDeleteVaultName(null)}
+                  onClick={() => setDeleteVaultName("")}
                   className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                 >
                   Cancel
