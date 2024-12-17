@@ -7,7 +7,7 @@ pub struct Passwords {
 }
 
 impl Passwords {
-    pub fn empty() -> Self {
+    pub fn random() -> Self {
         Passwords {
             inner: HashMap::new(),
         }

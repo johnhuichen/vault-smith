@@ -1,34 +1,14 @@
-use snafu::Whatever;
 use tauri::State;
 
 use crate::config::Config;
 use crate::vault::{Vault, VaultError};
-use std::fs;
-use std::sync::Mutex;
 
 #[tauri::command]
-pub fn create_vault(state: tauri::State<Mutex<Config>>, name: String) -> Result<(), String> {
-    let state = state.lock().unwrap();
-    println!("{:?}, {:?}", state, name);
-    Ok(())
-    // Vault::validate_name(&name).map_err(|e| e.to_string())?;
-    //
-    // let vaults_dir = get_vaults_dir().map_err(|e| e.to_string())?;
-    // let vault_path = vaults_dir.join(format!("{}.pwd", name));
-    //
-    // if vault_path.exists() {
-    //     return Err(VaultError::VaultExists { name }.to_string());
-    // }
-    //
-    // fs::write(&vault_path, "")
-    //     .map_err(|source| VaultError::CreateFile { source })
-    //     .map_err(|e| e.to_string())?;
-    //
-    // Ok(Vault {
-    //     id: name.clone(),
-    //     name,
-    //     last_accessed: chrono::Local::now().format("%Y-%m-%d").to_string(),
-    // })
+pub fn create_vault(state: State<Config>, name: String, masterkey: String) -> Result<Vault, VaultError> {
+    let config = state.inner();
+    let vault = Vault::new(name)?;
+    vault.create(&masterkey, config)?;
+    Ok(vault)
 }
 
 #[tauri::command]
