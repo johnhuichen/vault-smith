@@ -7,9 +7,9 @@ pub struct Passwords {
 }
 
 impl Passwords {
-    pub fn random() -> Self {
+    pub fn empty() -> Self {
         Passwords {
-            inner: HashMap::new(),
+            inner: HashMap::from([("test".to_string(), "123".to_string())]),
         }
     }
 
