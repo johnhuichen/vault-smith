@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, BorshDeserialize, BorshSerialize)]
 pub struct Password {
+    id: String,
     password: String,
     notes: String,
 }
@@ -17,6 +18,9 @@ impl Passwords {
         Passwords { inner: Vec::new() }
     }
 
+    // let id = uuid::Uuid::new_v4().to_string();
+    //
+    //
     // pub fn contains_key(&self, domain: &str) -> bool {
     //     self.inner.contains_key(domain)
     // }

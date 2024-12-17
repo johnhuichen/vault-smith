@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import {
   faArrowLeft,
@@ -21,6 +21,7 @@ interface VaultViewProps {
 }
 
 interface Password {
+  id: string;
   password: string;
   notes: string;
 }
@@ -36,7 +37,7 @@ export default function VaultView({ vaultId, onBack }: VaultViewProps) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [newNotes, setNewNotes] = useState("");
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingPassword, setEditingPassword] = useState<Password | null>(null);
 
   const handleUnlock = async () => {
     try {
@@ -76,12 +77,12 @@ export default function VaultView({ vaultId, onBack }: VaultViewProps) {
     }
   };
 
-  const handleDeletePassword = async (index: number) => {
+  const handleDeletePassword = async (id: string) => {
     try {
       await invoke("delete_password", {
         name: vaultId,
         masterkey: masterKey,
-        index: index,
+        id: id,
       });
 
       // Refresh passwords list
@@ -90,6 +91,32 @@ export default function VaultView({ vaultId, onBack }: VaultViewProps) {
         masterkey: masterKey,
       });
       setPasswords(updated);
+    } catch (err) {
+      setError(err as string);
+    }
+  };
+
+  const handleUpdatePassword = async (
+    id: string,
+    updatedPassword: string,
+    updatedNotes: string,
+  ) => {
+    try {
+      await invoke("update_password", {
+        name: vaultId,
+        masterkey: masterKey,
+        id: id,
+        password: updatedPassword,
+        notes: updatedNotes,
+      });
+
+      // Refresh passwords list
+      const updated = await invoke<Password[]>("get_passwords", {
+        name: vaultId,
+        masterkey: masterKey,
+      });
+      setPasswords(updated);
+      setEditingPassword(null);
     } catch (err) {
       setError(err as string);
     }
@@ -170,9 +197,9 @@ export default function VaultView({ vaultId, onBack }: VaultViewProps) {
 
         {/* Passwords List */}
         <div className="grid gap-4">
-          {filteredPasswords.map((entry, index) => (
+          {filteredPasswords.map((entry) => (
             <div
-              key={index}
+              key={entry.id}
               className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-shadow duration-200"
             >
               <div className="flex justify-between items-start">
@@ -204,13 +231,13 @@ export default function VaultView({ vaultId, onBack }: VaultViewProps) {
                     <FontAwesomeIcon icon={faCopy} />
                   </button>
                   <button
-                    onClick={() => setEditingIndex(index)}
+                    onClick={() => setEditingPassword(entry)}
                     className="text-gray-400 hover:text-sky-500 transition-colors duration-200"
                   >
                     <FontAwesomeIcon icon={faEdit} />
                   </button>
                   <button
-                    onClick={() => handleDeletePassword(index)}
+                    onClick={() => handleDeletePassword(entry.id)}
                     className="text-gray-400 hover:text-red-500 transition-colors duration-200"
                   >
                     <FontAwesomeIcon icon={faTrash} />
@@ -279,6 +306,86 @@ export default function VaultView({ vaultId, onBack }: VaultViewProps) {
                   className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors duration-200"
                 >
                   Add Password
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Password Modal */}
+        {editingPassword && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl p-6 w-full max-w-md">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-800">
+                  Edit Password
+                </h2>
+                <button
+                  onClick={() => setEditingPassword(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FontAwesomeIcon icon={faTimes} />
+                </button>
+              </div>
+
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+                  {error}
+                </div>
+              )}
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Notes
+                </label>
+                <textarea
+                  value={editingPassword.notes}
+                  onChange={(e) =>
+                    setEditingPassword({
+                      ...editingPassword,
+                      notes: e.target.value,
+                    })
+                  }
+                  placeholder="Add notes about this password..."
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                  rows={3}
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Password
+                </label>
+                <PasswordInput
+                  value={editingPassword.password}
+                  onChange={(value) =>
+                    setEditingPassword({
+                      ...editingPassword,
+                      password: value,
+                    })
+                  }
+                  placeholder="Enter password"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setEditingPassword(null)}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() =>
+                    handleUpdatePassword(
+                      editingPassword.id,
+                      editingPassword.password,
+                      editingPassword.notes,
+                    )
+                  }
+                  className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors duration-200"
+                >
+                  Save Changes
                 </button>
               </div>
             </div>
