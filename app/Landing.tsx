@@ -1,19 +1,20 @@
 import { useEffect, useState } from "react";
 
 import {
+  faDatabase,
   faExclamationTriangle,
+  faGear,
   faKey,
-  faLock,
   faPencilAlt,
   faPlus,
   faTimes,
   faTrash,
-  faUserLock,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { invoke } from "@tauri-apps/api/core";
 
 import Loading from "@/components/widgets/Loading";
+import PasswordInput from "@/components/widgets/PasswordInput";
 
 interface Vault {
   name: string;
@@ -43,7 +44,6 @@ function Landing({ onVaultSelect }: LandingProps) {
   const [updateNewMasterkey, setUpdateNewMasterkey] = useState("");
 
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
-  const [renameVaultName, setRenameVaultName] = useState("");
   const [renameOldName, setRenameOldName] = useState("");
   const [renameNewName, setRenameNewName] = useState("");
 
@@ -133,7 +133,7 @@ function Landing({ onVaultSelect }: LandingProps) {
 
   const openRenameModal = (vault: Vault) => {
     setRenameOldName(vault.name);
-    setRenameNewName("");
+    setRenameNewName(vault.name);
     setIsRenameModalOpen(true);
   };
 
@@ -151,8 +151,8 @@ function Landing({ onVaultSelect }: LandingProps) {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-            <FontAwesomeIcon icon={faUserLock} className="" />
-            Password Vaults
+            <FontAwesomeIcon icon={faGear} className="" />
+            Vault Smith
           </h1>
           <button
             onClick={() => {
@@ -176,7 +176,7 @@ function Landing({ onVaultSelect }: LandingProps) {
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
                   <FontAwesomeIcon
-                    icon={faLock}
+                    icon={faDatabase}
                     className="text-sky-500 text-xl"
                   />
                   <h2 className="text-xl font-semibold text-gray-800">
@@ -232,22 +232,20 @@ function Landing({ onVaultSelect }: LandingProps) {
                     <h2 className="font-bold text-gray-800 mb-1">
                       Current master key
                     </h2>
-                    <input
-                      type="password"
+                    <PasswordInput
                       placeholder="Enter the current master key"
                       value={updateOldMasterkey}
-                      onChange={(e) => setUpdateOldMasterkey(e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent mb-4"
+                      onChange={setUpdateOldMasterkey}
+                      className="mb-4"
                     />
                     <h2 className="font-bold text-gray-800 mb-1">
                       New master key
                     </h2>
-                    <input
-                      type="password"
+                    <PasswordInput
                       placeholder="Enter a new master key"
                       value={updateNewMasterkey}
-                      onChange={(e) => setUpdateNewMasterkey(e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent mb-4"
+                      onChange={setUpdateNewMasterkey}
+                      className="mb-4"
                     />
                     <div className="flex justify-end gap-3">
                       <button
@@ -371,12 +369,11 @@ function Landing({ onVaultSelect }: LandingProps) {
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent mb-4"
               />
               <h2 className="font-bold text-gray-800 mb-1">Master key</h2>
-              <input
-                type="password"
-                placeholder="Enter a master key"
+              <PasswordInput
                 value={createMasterkey}
-                onChange={(e) => setCreateMasterkey(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent mb-4"
+                onChange={setCreateMasterkey}
+                placeholder="Enter a master key"
+                className="mb-4"
               />
               <div className="flex justify-end gap-3">
                 <button
