@@ -1,7 +1,7 @@
 use self::commands::{create_vault, delete_vault, list_vaults, rename_vault};
 use self::config::Config;
 use snafu::{ResultExt, Whatever};
-use tauri::{Builder, Manager};
+use tauri::Manager;
 
 mod cipher;
 mod commands;
@@ -12,7 +12,7 @@ mod vault;
 #[snafu::report]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() -> Result<(), Whatever> {
-    Builder::default()
+    tauri::Builder::default()
         .setup(|app| {
             if cfg!(debug_assertions) {
                 let log_plugin = tauri_plugin_log::Builder::default()
@@ -22,7 +22,7 @@ pub fn run() -> Result<(), Whatever> {
             }
 
             app.manage(Config {
-                app_data_dir: app.path().app_data_dir()?,
+                app_data_dir: app.path().app_local_data_dir()?,
             });
 
             Ok(())

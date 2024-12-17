@@ -30,6 +30,7 @@ function Landing({ onVaultSelect }: LandingProps) {
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newVaultName, setNewVaultName] = useState("");
+  const [newMasterkey, setNewMasterkey] = useState("");
   const [deleteVaultId, setDeleteVaultId] = useState<string | null>(null);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [renameVaultId, setRenameVaultId] = useState<string | null>(null);
@@ -57,10 +58,11 @@ function Landing({ onVaultSelect }: LandingProps) {
       setError(null);
       const newVault = await invoke<Vault>("create_vault", {
         name: newVaultName.trim(),
+        masterkey: newMasterkey,
       });
-      console.log(newVault);
       // setVaults([...vaults, newVault]);
       setNewVaultName("");
+      setNewMasterkey("");
       setIsCreateModalOpen(false);
     } catch (err) {
       setError(err as string);
@@ -261,6 +263,13 @@ function Landing({ onVaultSelect }: LandingProps) {
                 placeholder="Vault name"
                 value={newVaultName}
                 onChange={(e) => setNewVaultName(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent mb-4"
+              />
+              <input
+                type="text"
+                placeholder="Master key"
+                value={newMasterkey}
+                onChange={(e) => setNewMasterkey(e.target.value)}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent mb-4"
               />
               <div className="flex justify-end gap-3">

@@ -4,15 +4,16 @@ use serde::{Deserialize, Serialize};
 use snafu::{Location, ResultExt, Snafu};
 use std::fs::{self, File};
 use std::io::BufWriter;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use tauri::ipc::InvokeError;
 
 use crate::cipher::{Cipher, CipherError};
+use crate::config::Config;
 use crate::passwords::Passwords;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Vault {
-    pub id: String,
-    pub last_accessed: String,
+    pub name: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -39,11 +40,11 @@ pub enum VaultError {
         location: Location,
     },
 
-    #[snafu(display("Vault with name '{}' already exists", name))]
-    VaultExists { name: String },
+    #[snafu(display("Vault file '{:?}' already exists", path))]
+    VaultFileExists { path: PathBuf },
 
-    #[snafu(display("Vault '{}' does not exist", name))]
-    VaultNotFound { name: String },
+    #[snafu(display("Vault file '{:?}' does not exist", path))]
+    VaultFileNotFound { path: PathBuf },
 
     #[snafu(display("Invalid vault name: {}", reason))]
     InvalidVaultName { reason: String },
@@ -54,6 +55,12 @@ pub enum VaultError {
     #[snafu(display("Master key must be at least {} characters long", min_length))]
     MasterKeyTooShort { min_length: usize },
 
+    #[snafu(display("Master key should not contain space in the beginning or the end"))]
+    MasterKeyTrimSpace,
+
+    #[snafu(display("Vault name cannot be empty"))]
+    NameEmpty,
+
     #[snafu(display("Cipher Error"))]
     Cipher { source: CipherError },
 
@@ -61,37 +68,88 @@ pub enum VaultError {
     AppDirAccess,
 }
 
+impl From<VaultError> for InvokeError {
+    fn from(val: VaultError) -> Self {
+        InvokeError::from(val.to_string())
+    }
+}
+
 impl Vault {
-    // fn get_vaults_dir() -> Result<PathBuf, VaultError> {
-    //     let maybe_app_dir = app_data_dir(&tauri::Config::default());
-    //
-    //     match maybe_app_dir {
-    //         Some(app_dir) => {
-    //             let vaults_dir = app_dir.join("pawn-vaults");
-    //             std::fs::create_dir_all(&vaults_dir)?;
-    //
-    //             Ok(vaults_dir)
-    //         }
-    //         None => Err(VaultError::AppDirAccess),
-    //     }
-    // }
-    //
-    // pub fn get_metadata_path(vault_path: &PathBuf) -> PathBuf {
-    //     vault_path.with_extension("meta")
-    // }
-    //
-    // pub fn validate_master_key(master_key: &str) -> Result<(), VaultError> {
-    //     const MIN_LENGTH: usize = 12;
-    //
-    //     if master_key.len() < MIN_LENGTH {
-    //         return Err(VaultError::MasterKeyTooShort {
-    //             min_length: MIN_LENGTH,
-    //         });
-    //     }
-    //
-    //     Ok(())
-    // }
-    //
+    pub fn new(name: String) -> Result<Self, VaultError> {
+        Self::validate_name(&name)?;
+        Ok(Vault { name })
+    }
+
+    pub fn create(&self, masterkey: &str, config: &Config) -> Result<(), VaultError> {
+        Self::validate_masterkey(masterkey)?;
+        let pwd_path = self.get_pwd_path(config);
+        Self::validate_path_not_exist(&pwd_path)?;
+
+        // Create metadata
+        let now = Local::now();
+        let metadata_path = self.get_meta_path(config);
+        let metadata = VaultMetadata {
+            created_at: now,
+            last_accessed: now,
+        };
+
+        // Save metadata to separate file
+        let metadata = serde_json::to_string(&metadata)?;
+        fs::write(&metadata_path, metadata)?;
+
+        // Create empty encrypted vault content
+        let cipher = Cipher::new(masterkey.to_string());
+        let file = File::create(pwd_path)?;
+        let mut writer = BufWriter::new(file);
+        cipher
+            .dump(Passwords::random().try_to_vec()?, &mut writer)
+            .context(CipherSnafu)?;
+
+        Ok(())
+    }
+
+    fn get_pwd_path(&self, config: &Config) -> PathBuf {
+        config.app_data_dir.join(format!("{}.pwd", self.name))
+    }
+
+    fn get_meta_path(&self, config: &Config) -> PathBuf {
+        config.app_data_dir.join(format!("{}.meta", self.name))
+    }
+
+    fn validate_masterkey(masterkey: &str) -> Result<(), VaultError> {
+        const MIN_LENGTH: usize = 12;
+
+        if masterkey.trim().len() != masterkey.len() {
+            return Err(VaultError::MasterKeyTrimSpace);
+        }
+
+        if masterkey.len() < MIN_LENGTH {
+            return Err(VaultError::MasterKeyTooShort {
+                min_length: MIN_LENGTH,
+            });
+        }
+
+        Ok(())
+    }
+
+    fn validate_name(name: &str) -> Result<(), VaultError> {
+        if name.trim().is_empty() {
+            return Err(VaultError::NameEmpty);
+        }
+
+        Ok(())
+    }
+
+    fn validate_path_not_exist(path: &Path) -> Result<(), VaultError> {
+        if path.exists() {
+            return Err(VaultError::VaultFileExists {
+                path: path.to_path_buf(),
+            });
+        }
+
+        Ok(())
+    }
+
     // pub fn from_file_name(file_name: &str) -> Option<Self> {
     //     if !file_name.ends_with(".pwd") {
     //         return None;
@@ -122,35 +180,6 @@ impl Vault {
     //     //     name,
     //     //     last_accessed,
     //     // })
-    // }
-    //
-    // pub fn create_encrypted_vault(
-    //     name: &str,
-    //     master_key: &str,
-    //     vault_path: &PathBuf,
-    // ) -> Result<(), VaultError> {
-    //     let now = Local::now();
-    //
-    //     // Create metadata
-    //     let metadata = VaultMetadata {
-    //         created_at: now,
-    //         last_accessed: now,
-    //     };
-    //
-    //     // Save metadata to separate file
-    //     let metadata_path = Self::get_metadata_path(vault_path);
-    //     let metadata = serde_json::to_string(&metadata).context(SerializeSnafu)?;
-    //     fs::write(&metadata_path, metadata)?;
-    //
-    //     // Create empty encrypted vault content
-    //     let cipher = Cipher::new(master_key.to_string());
-    //     let file = File::create(vault_path)?;
-    //     let mut writer = BufWriter::new(file);
-    //     cipher
-    //         .dump(Passwords::empty().try_to_vec()?, &mut writer)
-    //         .context(CipherSnafu)?;
-    //
-    //     Ok(())
     // }
     //
     // pub fn update_last_accessed(&self) -> Result<(), VaultError> {
