@@ -3,9 +3,7 @@
 import { useState } from "react";
 
 import Landing from "./Landing";
-
-// Import your vault view component when ready
-// import VaultView from './components/VaultView';
+import VaultView from "./VaultView";
 
 function App() {
   const [selectedVaultId, setSelectedVaultId] = useState<string | null>(null);
@@ -14,9 +12,14 @@ function App() {
     setSelectedVaultId(vaultId);
   };
 
-  // if (selectedVaultId) {
-  //   return <VaultView vaultId={selectedVaultId} onBack={() => setSelectedVaultId(null)} />;
-  // }
+  if (selectedVaultId) {
+    return (
+      <VaultView
+        vaultId={selectedVaultId}
+        onBack={() => setSelectedVaultId(null)}
+      />
+    );
+  }
 
   return <Landing onVaultSelect={handleVaultSelect} />;
 }
