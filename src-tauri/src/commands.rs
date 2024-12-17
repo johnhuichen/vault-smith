@@ -4,43 +4,24 @@ use crate::config::Config;
 use crate::vault::{Vault, VaultError};
 
 #[tauri::command]
-pub fn create_vault(state: State<Config>, name: String, masterkey: String) -> Result<Vault, VaultError> {
+pub fn create_vault(
+    state: State<Config>,
+    name: String,
+    masterkey: String,
+) -> Result<Vault, VaultError> {
     let config = state.inner();
-    let vault = Vault::new(name)?;
-    vault.create(&masterkey, config)?;
+    let vault = Vault::new(name, masterkey, config)?;
     Ok(vault)
 }
 
 #[tauri::command]
-pub async fn list_vaults() -> Result<(), String> {
-    Ok(())
-    // pub async fn list_vaults() -> Result<Vec<Vault>, String> {
-    // let vaults_dir = get_vaults_dir().map_err(|e| e.to_string())?;
-    //
-    // let mut vaults = Vec::new();
-    // let entries = fs::read_dir(vaults_dir)
-    //     .map_err(|source| VaultError::ReadDirectory { source })
-    //     .map_err(|e| e.to_string())?;
-    //
-    // for entry in entries {
-    //     let entry = entry
-    //         .map_err(|source| VaultError::ReadDirectory { source })
-    //         .map_err(|e| e.to_string())?;
-    //     let file_name = entry.file_name();
-    //     let file_name_str = file_name.to_string_lossy();
-    //
-    //     if let Some(vault) = Vault::from_file_name(&file_name_str) {
-    //         vaults.push(vault);
-    //     }
-    // }
-    //
-    // // Sort by last accessed time, most recent first
-    // vaults.sort_by(|a, b| b.last_accessed.cmp(&a.last_accessed));
-    // Ok(vaults)
+pub fn list_vaults(state: State<Config>) -> Result<Vec<Vault>, VaultError> {
+    let config = state.inner();
+    Vault::list(config)
 }
 
 #[tauri::command]
-pub async fn delete_vault(name: String) -> Result<(), String> {
+pub fn delete_vault(name: String) -> Result<(), String> {
     Ok(())
     // let vaults_dir = get_vaults_dir().map_err(|e| e.to_string())?;
     // let vault_path = vaults_dir.join(format!("{}.pwd", name));
@@ -63,7 +44,7 @@ pub async fn delete_vault(name: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn rename_vault(old_name: String, new_name: String) -> Result<(), String> {
+pub fn rename_vault(old_name: String, new_name: String) -> Result<(), String> {
     Ok(())
     // pub async fn rename_vault(old_name: String, new_name: String) -> Result<Vault, String> {
     // // Validate new name

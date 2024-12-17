@@ -15,13 +15,17 @@ import { invoke } from "@tauri-apps/api/core";
 import Loading from "@/components/widgets/Loading";
 
 interface Vault {
-  id: string;
   name: string;
-  lastAccessed: string;
+  metadata: VaultMetaData;
+}
+
+interface VaultMetaData {
+  created_at: string;
+  last_accessed: string;
 }
 
 interface LandingProps {
-  onVaultSelect: (vaultId: string) => void;
+  onVaultSelect: (vaultName: string) => void;
 }
 
 function Landing({ onVaultSelect }: LandingProps) {
@@ -31,9 +35,9 @@ function Landing({ onVaultSelect }: LandingProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newVaultName, setNewVaultName] = useState("");
   const [newMasterkey, setNewMasterkey] = useState("");
-  const [deleteVaultId, setDeleteVaultId] = useState<string | null>(null);
+  const [deleteVaultName, setDeleteVaultName] = useState<string | null>(null);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
-  const [renameVaultId, setRenameVaultId] = useState<string | null>(null);
+  const [renameVaultName, setRenameVaultName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -42,9 +46,8 @@ function Landing({ onVaultSelect }: LandingProps) {
 
   const loadVaults = async () => {
     try {
-      // const vaultList = await invoke<Vault[]>("list_vaults");
-      // setVaults(vaultList);
-      setVaults([]);
+      const newVaults = await invoke<Vault[]>("list_vaults");
+      setVaults(newVaults);
     } catch (error) {
       console.error("Failed to load vaults:", error);
       // Handle error (show notification, etc.)
@@ -60,7 +63,7 @@ function Landing({ onVaultSelect }: LandingProps) {
         name: newVaultName.trim(),
         masterkey: newMasterkey,
       });
-      // setVaults([...vaults, newVault]);
+      setVaults([...vaults, newVault]);
       setNewVaultName("");
       setNewMasterkey("");
       setIsCreateModalOpen(false);
@@ -70,11 +73,11 @@ function Landing({ onVaultSelect }: LandingProps) {
     }
   };
 
-  const handleDeleteVault = async (vaultId: string) => {
+  const handleDeleteVault = async (vaultName: string) => {
     try {
-      await invoke("delete_vault", { name: vaultId });
-      setVaults(vaults.filter((vault) => vault.id !== vaultId));
-      setDeleteVaultId(null);
+      await invoke("delete_vault", { name: vaultName });
+      setVaults(vaults.filter((vault) => vault.name !== vaultName));
+      setDeleteVaultName(null);
     } catch (error) {
       console.error("Failed to delete vault:", error);
       // Show error message to user
@@ -82,21 +85,21 @@ function Landing({ onVaultSelect }: LandingProps) {
   };
 
   const handleRenameVault = async () => {
-    if (!renameVaultId || !newVaultName.trim()) return;
+    if (!renameVaultName || !newVaultName.trim()) return;
 
     try {
       const updatedVault = await invoke<Vault>("rename_vault", {
-        oldName: renameVaultId,
+        oldName: renameVaultName,
         newName: newVaultName.trim(),
       });
 
       setVaults(
         vaults.map((vault) =>
-          vault.id === renameVaultId ? updatedVault : vault,
+          vault.name === renameVaultName ? updatedVault : vault,
         ),
       );
 
-      setRenameVaultId(null);
+      setRenameVaultName(null);
       setNewVaultName("");
       setIsRenameModalOpen(false);
     } catch (err) {
@@ -105,7 +108,7 @@ function Landing({ onVaultSelect }: LandingProps) {
   };
 
   const openRenameModal = (vault: Vault) => {
-    setRenameVaultId(vault.id);
+    setRenameVaultName(vault.name);
     setNewVaultName(vault.name);
     setIsRenameModalOpen(true);
   };
@@ -136,7 +139,7 @@ function Landing({ onVaultSelect }: LandingProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {vaults.map((vault) => (
             <div
-              key={vault.id}
+              key={vault.name}
               className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow duration-200"
             >
               {/* Update the vault card actions */}
@@ -158,7 +161,7 @@ function Landing({ onVaultSelect }: LandingProps) {
                     <FontAwesomeIcon icon={faPencilAlt} />
                   </button>
                   <button
-                    onClick={() => setDeleteVaultId(vault.id)}
+                    onClick={() => setDeleteVaultName(vault.name)}
                     className="text-gray-400 hover:text-red-500 transition-colors duration-200"
                   >
                     <FontAwesomeIcon icon={faTrash} />
@@ -177,7 +180,7 @@ function Landing({ onVaultSelect }: LandingProps) {
                       <button
                         onClick={() => {
                           setIsRenameModalOpen(false);
-                          setRenameVaultId(null);
+                          setRenameVaultName(null);
                           setNewVaultName("");
                         }}
                         className="text-gray-400 hover:text-gray-600"
@@ -204,7 +207,7 @@ function Landing({ onVaultSelect }: LandingProps) {
                       <button
                         onClick={() => {
                           setIsRenameModalOpen(false);
-                          setRenameVaultId(null);
+                          setRenameVaultName(null);
                           setNewVaultName("");
                         }}
                         className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
@@ -226,7 +229,7 @@ function Landing({ onVaultSelect }: LandingProps) {
                 Last accessed: {vault.lastAccessed}
               </p>
               <button
-                onClick={() => onVaultSelect(vault.id)}
+                onClick={() => onVaultSelect(vault.name)}
                 className="w-full bg-sky-50 hover:bg-sky-100 text-sky-600 py-2 rounded-lg transition-colors duration-200"
               >
                 Open Vault
@@ -291,7 +294,7 @@ function Landing({ onVaultSelect }: LandingProps) {
         )}
 
         {/* Delete Confirmation Modal */}
-        {deleteVaultId && (
+        {deleteVaultName && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-xl p-6 w-full max-w-md">
               <div className="flex items-center gap-3 mb-4">
@@ -309,13 +312,13 @@ function Landing({ onVaultSelect }: LandingProps) {
               </p>
               <div className="flex justify-end gap-3">
                 <button
-                  onClick={() => setDeleteVaultId(null)}
+                  onClick={() => setDeleteVaultName(null)}
                   className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={() => handleDeleteVault(deleteVaultId)}
+                  onClick={() => handleDeleteVault(deleteVaultName)}
                   className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200"
                 >
                   Delete Vault
