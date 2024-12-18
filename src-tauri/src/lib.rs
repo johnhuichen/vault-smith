@@ -1,17 +1,15 @@
-use self::commands::{
-    add_password, create_vault, delete_password, delete_vault, get_passwords, list_vaults,
-    rename_vault, update_vault,
-};
 use self::config::Config;
+use self::password_commands::{add_password, delete_password, get_passwords};
+use self::vault_commands::{create_vault, delete_vault, list_vaults, rename_vault, update_vault};
 use snafu::{ResultExt, Whatever};
 use tauri::Manager;
 
 mod cipher;
-mod commands;
 mod config;
+mod password_commands;
 mod passwords;
 mod vault;
-mod vault_controller;
+mod vault_commands;
 
 #[snafu::report]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

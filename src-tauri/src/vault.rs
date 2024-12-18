@@ -127,29 +127,33 @@ impl Vault {
         })
     }
 
-    pub fn update_masterkey(
-        &self,
-        old_masterkey: &str,
-        new_masterkey: &str,
-    ) -> Result<(), VaultError> {
-        let old_cipher = Cipher::new(old_masterkey);
+    pub fn decrypt(&self, masterkey: &str) -> Result<Passwords, VaultError> {
+        let old_cipher = Cipher::new(masterkey);
         let file = File::open(&self.file_path)?;
         let mut reader = BufReader::new(file);
         let encoded = old_cipher.parse(&mut reader)?;
         let passwords = Passwords::try_from_slice(&encoded)?;
-
-        self.save_to_file(new_masterkey, passwords)?;
-
-        Ok(())
+        Ok(passwords)
     }
 
-    pub fn save_to_file(&self, masterkey: &str, passwords: Passwords) -> Result<(), VaultError> {
+    pub fn encrypt(&self, masterkey: &str, passwords: Passwords) -> Result<(), VaultError> {
         let cipher = Cipher::new(masterkey);
         let file = File::create(&self.file_path)?;
         let mut writer = BufWriter::new(file);
         cipher.dump(passwords.try_to_vec()?, &mut writer)?;
 
         self.metadata.save_to_file()?;
+
+        Ok(())
+    }
+
+    pub fn update_masterkey(
+        &self,
+        old_masterkey: &str,
+        new_masterkey: &str,
+    ) -> Result<(), VaultError> {
+        let passwords = self.decrypt(old_masterkey)?;
+        self.encrypt(new_masterkey, passwords)?;
 
         Ok(())
     }

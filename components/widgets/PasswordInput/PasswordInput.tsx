@@ -5,19 +5,21 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 interface PasswordInputProps {
   value: string;
-  onChange: (value: string) => void;
+  onChange?: (value: string) => void;
   placeholder?: string;
   label?: string;
   error?: string;
+  disabled: boolean;
   className?: string;
 }
 
 function PasswordInput({
   value,
-  onChange,
-  label,
-  error,
+  onChange = () => {},
   placeholder = "Enter password",
+  label = "",
+  error = "",
+  disabled = false,
   className = "",
 }: PasswordInputProps) {
   const [showPassword, setShowPassword] = useState(false);
@@ -35,6 +37,7 @@ function PasswordInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
+          disabled
           className={`
             w-full px-4 py-2 pr-12 
             rounded-lg border 
