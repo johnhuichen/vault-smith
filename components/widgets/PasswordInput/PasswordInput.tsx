@@ -9,7 +9,7 @@ interface PasswordInputProps {
   placeholder?: string;
   label?: string;
   error?: string;
-  disabled: boolean;
+  disabled?: boolean;
   className?: string;
 }
 
@@ -37,7 +37,7 @@ function PasswordInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          disabled
+          disabled={disabled}
           className={`
             w-full px-4 py-2 pr-12 
             rounded-lg border 

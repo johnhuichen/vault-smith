@@ -1,5 +1,5 @@
 use self::config::Config;
-use self::password_commands::{add_password, delete_password, get_passwords};
+use self::password_commands::{add_password, delete_password, get_passwords, update_password};
 use self::vault_commands::{create_vault, delete_vault, list_vaults, rename_vault, update_vault};
 use snafu::{ResultExt, Whatever};
 use tauri::Manager;
@@ -37,7 +37,8 @@ pub fn run() -> Result<(), Whatever> {
             rename_vault,
             get_passwords,
             add_password,
-            delete_password
+            delete_password,
+            update_password
         ])
         .run(tauri::generate_context!())
         .whatever_context("error while running tauri application")?;
