@@ -11,6 +11,7 @@ mod commands;
 mod config;
 mod passwords;
 mod vault;
+mod vault_controller;
 
 #[snafu::report]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
