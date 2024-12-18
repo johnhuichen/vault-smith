@@ -6,22 +6,20 @@ import Landing from "./Landing";
 import VaultView from "./VaultView";
 
 function App() {
-  const [selectedVaultId, setSelectedVaultId] = useState<string | null>(null);
+  const [selectedVaultName, setSelectedVaultName] = useState<string | null>(
+    null,
+  );
 
-  const handleVaultSelect = (vaultId: string) => {
-    setSelectedVaultId(vaultId);
-  };
-
-  if (selectedVaultId) {
+  if (selectedVaultName) {
     return (
       <VaultView
-        vaultId={selectedVaultId}
-        onBack={() => setSelectedVaultId(null)}
+        vaultName={selectedVaultName}
+        onBack={() => setSelectedVaultName(null)}
       />
     );
   }
 
-  return <Landing onVaultSelect={handleVaultSelect} />;
+  return <Landing onVaultSelect={setSelectedVaultName} />;
 }
 
 export default App;

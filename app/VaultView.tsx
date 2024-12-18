@@ -12,11 +12,13 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { invoke } from "@tauri-apps/api/core";
+import cx from "classnames";
 
+import Loading from "@/components/widgets/Loading";
 import PasswordInput from "@/components/widgets/PasswordInput";
 
 interface VaultViewProps {
-  vaultId: string;
+  vaultName: string;
   onBack: () => void;
 }
 
@@ -26,73 +28,89 @@ interface Password {
   notes: string;
 }
 
-export default function VaultView({ vaultId, onBack }: VaultViewProps) {
+export default function VaultView({ vaultName, onBack }: VaultViewProps) {
   const [passwords, setPasswords] = useState<Password[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [masterKey, setMasterKey] = useState("");
   const [isUnlocked, setIsUnlocked] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string>("");
 
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
   const [newNotes, setNewNotes] = useState("");
   const [editingPassword, setEditingPassword] = useState<Password | null>(null);
+  const [passwordToDelete, setPasswordToDelete] = useState<Password | null>(
+    null,
+  );
+
+  // Loading states
+  const [unlockLoading, setUnlockLoading] = useState(false);
+  const [addPasswordLoading, setAddPasswordLoading] = useState(false);
+  const [updatePasswordLoading, setUpdatePasswordLoading] = useState(false);
+  const [deletePasswordLoading, setDeletePasswordLoading] = useState(false);
 
   const handleUnlock = async () => {
     try {
-      setError(null);
+      setUnlockLoading(true);
+      setError("");
       const result = await invoke<Password[]>("get_passwords", {
-        name: vaultId,
+        vaultName,
         masterkey: masterKey,
       });
       setPasswords(result);
       setIsUnlocked(true);
     } catch (err) {
       setError(err as string);
+    } finally {
+      setUnlockLoading(false);
     }
   };
 
   const handleAddPassword = async () => {
     try {
-      setError(null);
+      setAddPasswordLoading(true);
+      setError("");
       await invoke("add_password", {
-        name: vaultId,
+        vaultName,
         masterkey: masterKey,
-        password: newPassword,
         notes: newNotes,
       });
 
       // Refresh passwords list
       const updated = await invoke<Password[]>("get_passwords", {
-        name: vaultId,
+        vaultName,
         masterkey: masterKey,
       });
       setPasswords(updated);
       setIsAddModalOpen(false);
-      setNewPassword("");
       setNewNotes("");
     } catch (err) {
       setError(err as string);
+    } finally {
+      setAddPasswordLoading(false);
     }
   };
 
-  const handleDeletePassword = async (id: string) => {
+  const handleDeletePassword = async (password: Password) => {
     try {
+      setDeletePasswordLoading(true);
       await invoke("delete_password", {
-        name: vaultId,
+        vaultName,
         masterkey: masterKey,
-        id: id,
+        id: password.id,
       });
 
       // Refresh passwords list
       const updated = await invoke<Password[]>("get_passwords", {
-        name: vaultId,
+        vaultName,
         masterkey: masterKey,
       });
       setPasswords(updated);
+      setPasswordToDelete(null);
     } catch (err) {
       setError(err as string);
+    } finally {
+      setDeletePasswordLoading(false);
     }
   };
 
@@ -102,8 +120,9 @@ export default function VaultView({ vaultId, onBack }: VaultViewProps) {
     updatedNotes: string,
   ) => {
     try {
+      setUpdatePasswordLoading(true);
       await invoke("update_password", {
-        name: vaultId,
+        vaultName,
         masterkey: masterKey,
         id: id,
         password: updatedPassword,
@@ -112,13 +131,15 @@ export default function VaultView({ vaultId, onBack }: VaultViewProps) {
 
       // Refresh passwords list
       const updated = await invoke<Password[]>("get_passwords", {
-        name: vaultId,
+        vaultName,
         masterkey: masterKey,
       });
       setPasswords(updated);
       setEditingPassword(null);
     } catch (err) {
       setError(err as string);
+    } finally {
+      setUpdatePasswordLoading(false);
     }
   };
 
@@ -152,9 +173,13 @@ export default function VaultView({ vaultId, onBack }: VaultViewProps) {
           />
           <button
             onClick={handleUnlock}
-            className="w-full bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+            className={cx(
+              "w-full bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg transition-colors duration-200",
+              "flex justify-center items-center",
+            )}
           >
-            Unlock
+            {unlockLoading && <Loading className="h-5 scale-50" />}
+            {!unlockLoading && "Unlock"}
           </button>
         </div>
       </div>
@@ -173,11 +198,13 @@ export default function VaultView({ vaultId, onBack }: VaultViewProps) {
             >
               <FontAwesomeIcon icon={faCircleLeft} />
             </button>
-            <h1 className="text-3xl font-bold text-gray-800">{vaultId}</h1>
+            <h1 className="text-3xl font-bold text-gray-800">{vaultName}</h1>
           </div>
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200"
+            className={cx(
+              "bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200",
+            )}
           >
             <FontAwesomeIcon icon={faPlus} />
             Add Password
@@ -242,7 +269,7 @@ export default function VaultView({ vaultId, onBack }: VaultViewProps) {
                     <FontAwesomeIcon icon={faEdit} />
                   </button>
                   <button
-                    onClick={() => handleDeletePassword(entry.id)}
+                    onClick={() => setPasswordToDelete(entry)}
                     className="text-gray-400 hover:text-red-500 transition-colors duration-200"
                   >
                     <FontAwesomeIcon icon={faTrash} />
@@ -288,17 +315,6 @@ export default function VaultView({ vaultId, onBack }: VaultViewProps) {
                 />
               </div>
 
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Password
-                </label>
-                <PasswordInput
-                  value={newPassword}
-                  onChange={setNewPassword}
-                  placeholder="Enter password"
-                />
-              </div>
-
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setIsAddModalOpen(false)}
@@ -308,9 +324,13 @@ export default function VaultView({ vaultId, onBack }: VaultViewProps) {
                 </button>
                 <button
                   onClick={handleAddPassword}
-                  className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors duration-200"
+                  className={cx(
+                    "flex justify-center items-center w-[150px]",
+                    "px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors duration-200",
+                  )}
                 >
-                  Add Password
+                  {addPasswordLoading && <Loading className="h-5 scale-50" />}
+                  {!addPasswordLoading && "Add Password"}
                 </button>
               </div>
             </div>
@@ -388,9 +408,67 @@ export default function VaultView({ vaultId, onBack }: VaultViewProps) {
                       editingPassword.notes,
                     )
                   }
-                  className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors duration-200"
+                  className={cx(
+                    "flex justify-center items-center w-[150px]",
+                    "px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors duration-200",
+                  )}
                 >
-                  Save Changes
+                  {updatePasswordLoading && (
+                    <Loading className="h-5 scale-50" />
+                  )}
+                  {!updatePasswordLoading && "Save Changes"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {passwordToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl p-6 w-full max-w-md">
+              <div className="flex items-center gap-3 mb-4">
+                <FontAwesomeIcon
+                  icon={faTrash}
+                  className="text-red-500 text-xl"
+                />
+                <h2 className="text-2xl font-bold text-gray-800">
+                  Delete Password
+                </h2>
+              </div>
+
+              <p className="text-gray-600 mb-2">
+                Are you sure you want to delete this password?
+              </p>
+              <p className="text-gray-600 mb-6">
+                <strong className="text-red-600">
+                  This action cannot be undone.
+                </strong>
+              </p>
+
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <div className="text-sm text-gray-500 mb-1">Notes</div>
+                <div className="text-gray-700">{passwordToDelete.notes}</div>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setPasswordToDelete(null)}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeletePassword(passwordToDelete)}
+                  className={cx(
+                    "flex justify-center items-center w-[160px]",
+                    "px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200",
+                  )}
+                >
+                  {deletePasswordLoading && (
+                    <Loading className="h-5 scale-50" />
+                  )}
+                  {!deletePasswordLoading && "Delete Password"}
                 </button>
               </div>
             </div>

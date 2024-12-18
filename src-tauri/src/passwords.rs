@@ -31,6 +31,38 @@ pub struct Passwords {
 
 impl Passwords {
     pub fn random_one() -> Self {
+        let password = Self::generate_password();
+        let notes = "A random password".to_string();
+        Passwords {
+            inner: vec![Password::new(1, password, notes)],
+        }
+    }
+
+    pub fn update_password(&mut self, id: i32, password: String, notes: String) {
+        self.inner.iter_mut().for_each(|p| {
+            if p.id == id {
+                *p = Password::new(id, password.to_string(), notes.to_string())
+            }
+        })
+    }
+
+    pub fn add_password(&mut self, notes: String) {
+        let id = match self.inner.iter().map(|p| p.id).max() {
+            Some(max_id) => max_id + 1,
+            None => 1,
+        };
+        let password = Self::generate_password();
+        let password = Password::new(id, password, notes);
+        self.inner.push(password);
+    }
+
+    pub fn delete_password(&mut self, id: i32) {
+        if let Some(index) = self.inner.iter().position(|x| x.id == id) {
+            self.inner.remove(index);
+        };
+    }
+
+    fn generate_password() -> String {
         let length = rand::thread_rng().gen_range(12..20);
         let pg = PasswordGenerator {
             length,
@@ -42,29 +74,6 @@ impl Passwords {
             exclude_similar_characters: false,
             strict: true,
         };
-        let password = pg.generate_one().unwrap();
-        let notes = "A random password".to_string();
-        Passwords {
-            inner: vec![Password::new(1, password, notes)],
-        }
+        pg.generate_one().unwrap()
     }
-
-    // let id = uuid::Uuid::new_v4().to_string();
-    //
-    //
-    // pub fn contains_key(&self, domain: &str) -> bool {
-    //     self.inner.contains_key(domain)
-    // }
-    //
-    // pub fn insert(&mut self, domain: String, password: String) -> Option<String> {
-    //     self.inner.insert(domain, password)
-    // }
-    //
-    // pub fn update(&mut self, domain: String, password: String) {
-    //     *self.inner.entry(domain).or_insert(password) = password.to_string()
-    // }
-    //
-    // pub fn delete(&mut self, domain: &str) -> Option<String> {
-    //     self.inner.remove(domain)
-    // }
 }

@@ -46,11 +46,11 @@ impl From<PasswordCommandsError> for InvokeError {
 #[tauri::command]
 pub async fn get_passwords(
     state: State<'_, Config>,
-    name: String,
+    vault_name: String,
     masterkey: String,
 ) -> Result<Vec<Password>, PasswordCommandsError> {
     let config = state.inner();
-    let vault = Vault::new(config, name)?;
+    let vault = Vault::new(config, vault_name)?;
     let passwords = vault.decrypt(&masterkey)?;
     Ok(passwords.inner)
 }
@@ -58,22 +58,48 @@ pub async fn get_passwords(
 #[tauri::command]
 pub async fn add_password(
     state: State<'_, Config>,
-    name: String,
+    vault_name: String,
     masterkey: String,
-    password: String,
     notes: String,
 ) -> Result<(), PasswordCommandsError> {
+    let config = state.inner();
+    let vault = Vault::new(config, vault_name)?;
+    let mut passwords = vault.decrypt(&masterkey)?;
+    passwords.add_password(notes);
+    vault.encrypt(&masterkey, passwords)?;
     Ok(())
-    // Implementation to add new password
 }
 
 #[tauri::command]
 pub async fn delete_password(
     state: State<'_, Config>,
-    name: String,
+    vault_name: String,
     masterkey: String,
-    index: usize,
+    id: i32,
 ) -> Result<(), PasswordCommandsError> {
+    let config = state.inner();
+    let vault = Vault::new(config, vault_name)?;
+    let mut passwords = vault.decrypt(&masterkey)?;
+    passwords.delete_password(id);
+    vault.encrypt(&masterkey, passwords)?;
+
     Ok(())
-    // Implementation to delete password at index
+}
+
+#[tauri::command]
+pub async fn update_password(
+    state: State<'_, Config>,
+    vault_name: String,
+    masterkey: String,
+    id: i32,
+    password: String,
+    notes: String,
+) -> Result<(), PasswordCommandsError> {
+    let config = state.inner();
+    let vault = Vault::new(config, vault_name)?;
+    let mut passwords = vault.decrypt(&masterkey)?;
+    passwords.update_password(id, password, notes);
+    vault.encrypt(&masterkey, passwords)?;
+
+    Ok(())
 }
