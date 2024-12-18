@@ -221,7 +221,7 @@ export default function VaultView({ vaultId, onBack }: VaultViewProps) {
                   </div>
                   <PasswordInput
                     value={entry.password}
-                    onChange={() => {}}
+                    disabled
                     className="bg-gray-50"
                   />
                 </div>

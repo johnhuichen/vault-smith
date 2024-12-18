@@ -31,3 +31,5 @@ cocoon = { version = "0.4.3", default-features = false, features = [
 borsh = "0.10.3"
 snafu = "0.8.4"
 chrono = { version = "0.4.31", features = ["serde"] }
+passwords = "3.1.16"
+rand = "0.8.5"
