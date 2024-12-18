@@ -67,6 +67,12 @@ pub enum VaultError {
     #[snafu(display("Master key should not contain space in the beginning or the end"))]
     MasterKeyTrimSpace,
 
+    #[snafu(display("Master keys do not match"))]
+    MasterKeyMismatch,
+
+    #[snafu(display("New master key is the same as the current master key"))]
+    MasterKeyUpdateSameValue,
+
     #[snafu(display("Vault name cannot be empty"))]
     NameEmpty,
 
@@ -81,10 +87,15 @@ impl From<VaultError> for InvokeError {
 }
 
 impl Vault {
-    pub fn new(config: &Config, name: &str, masterkey: &str) -> Result<Self, VaultError> {
+    pub fn new(
+        config: &Config,
+        name: &str,
+        masterkey: &str,
+        confirm_masterkey: &str,
+    ) -> Result<Self, VaultError> {
         let name = name.trim();
         Self::validate_name(name)?;
-        Self::validate_masterkey(masterkey)?;
+        Self::validate_masterkey(masterkey, confirm_masterkey)?;
 
         // Create empty encrypted vault content
         let pwd_path = Self::get_pwd_path(config, name);
@@ -141,8 +152,9 @@ impl Vault {
         name: &str,
         old_masterkey: &str,
         new_masterkey: &str,
+        confirm_new_masterkey: &str,
     ) -> Result<(), VaultError> {
-        Self::validate_masterkey(new_masterkey)?;
+        Self::validate_new_masterkey(old_masterkey, new_masterkey, confirm_new_masterkey)?;
 
         let old_cipher = Cipher::new(old_masterkey);
         let pwd_path = Self::get_pwd_path(config, name);
@@ -165,9 +177,12 @@ impl Vault {
         Self::validate_name(new_name)?;
 
         let old_pwd_path = Self::get_pwd_path(config, name);
-        let new_pwd_path = Self::get_pwd_path(config, new_name);
         let old_meta_path = Self::get_meta_path(config, name);
+
+        let new_pwd_path = Self::get_pwd_path(config, new_name);
         let new_meta_path = Self::get_meta_path(config, new_name);
+
+        Self::validate_path_not_exist(&new_pwd_path)?;
 
         // Rename the file
         fs::rename(&old_pwd_path, &new_pwd_path)?;
@@ -218,8 +233,24 @@ impl Vault {
         config.app_data_dir.join(format!("{}.meta", name))
     }
 
-    fn validate_masterkey(masterkey: &str) -> Result<(), VaultError> {
+    fn validate_new_masterkey(
+        old_masterkey: &str,
+        new_masterkey: &str,
+        confirm_masterkey: &str,
+    ) -> Result<(), VaultError> {
+        if old_masterkey == new_masterkey {
+            return Err(VaultError::MasterKeyUpdateSameValue);
+        }
+
+        Self::validate_masterkey(new_masterkey, confirm_masterkey)
+    }
+
+    fn validate_masterkey(masterkey: &str, confirm_masterkey: &str) -> Result<(), VaultError> {
         const MIN_LENGTH: usize = 12;
+
+        if masterkey != confirm_masterkey {
+            return Err(VaultError::MasterKeyMismatch);
+        }
 
         if masterkey.trim().len() != masterkey.len() {
             return Err(VaultError::MasterKeyTrimSpace);
