@@ -32,7 +32,7 @@ pub struct Passwords {
 impl Passwords {
     pub fn random_one() -> Self {
         let password = Self::generate_password();
-        let notes = "A random password".to_string();
+        let notes = "A random example password".to_string();
         Passwords {
             inner: vec![Password::new(1, password, notes)],
         }

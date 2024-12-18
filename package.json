@@ -1,5 +1,5 @@
 {
-  "name": "pawn-vaults",
+  "name": "vault-smith",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -15,6 +15,7 @@
     "@fortawesome/free-solid-svg-icons": "^6.7.1",
     "@fortawesome/react-fontawesome": "^0.2.2",
     "classnames": "^2.5.1",
+    "lodash": "^4.17.21",
     "next": "15.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
@@ -24,6 +25,7 @@
     "@tauri-apps/api": "^2.1.1",
     "@tauri-apps/cli": "^2.1.0",
     "@trivago/prettier-plugin-sort-imports": "^5.2.0",
+    "@types/lodash": "^4.17.13",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

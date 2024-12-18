@@ -102,7 +102,7 @@ pub async fn create_vault(
     validate_path_not_exist(&vault.file_path)?;
 
     let passwords = Passwords::random_one();
-    vault.encrypt(&masterkey, passwords)?;
+    vault.encrypt(&masterkey, &passwords)?;
 
     Ok(vault)
 }

@@ -58,6 +58,12 @@ impl VaultMetadata {
         }
     }
 
+    pub fn update_last_accessed(&mut self) -> Result<(), VaultMetadataError> {
+        self.last_accessed = Local::now();
+        self.save_to_file()?;
+        Ok(())
+    }
+
     pub fn save_to_file(&self) -> Result<(), VaultMetadataError> {
         let metadata_str = serde_json::to_string(self)?;
         fs::write(&self.file_path, metadata_str)?;
@@ -136,7 +142,7 @@ impl Vault {
         Ok(passwords)
     }
 
-    pub fn encrypt(&self, masterkey: &str, passwords: Passwords) -> Result<(), VaultError> {
+    pub fn encrypt(&self, masterkey: &str, passwords: &Passwords) -> Result<(), VaultError> {
         let cipher = Cipher::new(masterkey);
         let file = File::create(&self.file_path)?;
         let mut writer = BufWriter::new(file);
@@ -153,7 +159,7 @@ impl Vault {
         new_masterkey: &str,
     ) -> Result<(), VaultError> {
         let passwords = self.decrypt(old_masterkey)?;
-        self.encrypt(new_masterkey, passwords)?;
+        self.encrypt(new_masterkey, &passwords)?;
 
         Ok(())
     }
@@ -163,6 +169,11 @@ impl Vault {
             fs::remove_file(&self.file_path)?;
         }
         self.metadata.delete_file()?;
+        Ok(())
+    }
+
+    pub fn update_last_accessed(&mut self) -> Result<(), VaultError> {
+        self.metadata.update_last_accessed()?;
         Ok(())
     }
 
