@@ -5,7 +5,7 @@ interface Props {
 }
 
 interface Result {
-  nodeRef: React.RefObject<HTMLDivElement>;
+  nodeRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const useClickOutside = ({ handleClickOutside }: Props): Result => {
