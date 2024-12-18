@@ -1,6 +1,11 @@
 import { useState } from "react";
 
-import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import {
+  faCheck,
+  faCopy,
+  faEye,
+  faEyeSlash,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 interface PasswordInputProps {
@@ -23,6 +28,13 @@ function PasswordInput({
   className = "",
 }: PasswordInputProps) {
   const [showPassword, setShowPassword] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+  };
 
   return (
     <div className={className}>
@@ -39,19 +51,35 @@ function PasswordInput({
           placeholder={placeholder}
           disabled={disabled}
           className={`
-            w-full px-4 py-2 pr-12 
+            w-full px-4 py-2 pr-24  // Increased right padding for both icons
             rounded-lg border 
             focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent
             ${error ? "border-red-500" : "border-gray-300"}
           `}
         />
-        <button
-          type="button"
-          onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-        >
-          <FontAwesomeIcon icon={showPassword ? faEye : faEyeSlash} />
-        </button>
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+          {/* Copy button */}
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="text-gray-500 hover:text-gray-700 focus:outline-none transition-colors duration-200"
+            title={copied ? "Copied!" : "Copy to clipboard"}
+          >
+            <FontAwesomeIcon
+              icon={copied ? faCheck : faCopy}
+              className={copied ? "text-sky-500" : ""}
+            />
+          </button>
+          {/* Show/Hide password button */}
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="text-gray-500 hover:text-gray-700 focus:outline-none transition-colors duration-200"
+            title={showPassword ? "Hide password" : "Show password"}
+          >
+            <FontAwesomeIcon icon={showPassword ? faEye : faEyeSlash} />
+          </button>
+        </div>
       </div>
       {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>

@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "pawn-vaults",
+  "productName": "vault-smith",
   "version": "0.1.0",
-  "identifier": "pawn-vaults",
+  "identifier": "vault-smith",
   "build": {
     "frontendDist": "../out",
     "devUrl": "http://localhost:3000",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Pawn Vaults",
+        "title": "Vault Smith",
         "width": 800,
         "height": 600,
         "resizable": true,

@@ -2,11 +2,9 @@ import { useState } from "react";
 
 import {
   faCircleLeft,
-  faCopy,
   faEdit,
   faPlus,
   faSearch,
-  faStickyNote,
   faTimes,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
@@ -14,6 +12,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { invoke } from "@tauri-apps/api/core";
 import cx from "classnames";
 
+import { accentClasses, buttonClasses } from "@/components/lib/cssClasses";
+import Documentation from "@/components/widgets/Documentation";
+import { glossary } from "@/components/widgets/Documentation/glossary";
 import Loading from "@/components/widgets/Loading";
 import PasswordInput from "@/components/widgets/PasswordInput";
 
@@ -70,17 +71,12 @@ export default function VaultView({ vaultName, onBack }: VaultViewProps) {
     try {
       setAddPasswordLoading(true);
       setError("");
-      await invoke("add_password", {
+      const updated = await invoke<Password[]>("add_password", {
         vaultName,
         masterkey: masterKey,
         notes: newNotes,
       });
 
-      // Refresh passwords list
-      const updated = await invoke<Password[]>("get_passwords", {
-        vaultName,
-        masterkey: masterKey,
-      });
       setPasswords(updated);
       setIsAddModalOpen(false);
       setNewNotes("");
@@ -94,17 +90,12 @@ export default function VaultView({ vaultName, onBack }: VaultViewProps) {
   const handleDeletePassword = async (password: Password) => {
     try {
       setDeletePasswordLoading(true);
-      await invoke("delete_password", {
+      const updated = await invoke<Password[]>("delete_password", {
         vaultName,
         masterkey: masterKey,
         id: password.id,
       });
 
-      // Refresh passwords list
-      const updated = await invoke<Password[]>("get_passwords", {
-        vaultName,
-        masterkey: masterKey,
-      });
       setPasswords(updated);
       setPasswordToDelete(null);
     } catch (err) {
@@ -121,7 +112,7 @@ export default function VaultView({ vaultName, onBack }: VaultViewProps) {
   ) => {
     try {
       setUpdatePasswordLoading(true);
-      await invoke("update_password", {
+      const updated = await invoke<Password[]>("update_password", {
         vaultName,
         masterkey: masterKey,
         id: id,
@@ -129,11 +120,6 @@ export default function VaultView({ vaultName, onBack }: VaultViewProps) {
         notes: updatedNotes,
       });
 
-      // Refresh passwords list
-      const updated = await invoke<Password[]>("get_passwords", {
-        vaultName,
-        masterkey: masterKey,
-      });
       setPasswords(updated);
       setEditingPassword(null);
     } catch (err) {
@@ -149,7 +135,7 @@ export default function VaultView({ vaultName, onBack }: VaultViewProps) {
 
   if (!isUnlocked) {
     return (
-      <div className="min-h-screen bg-white p-6">
+      <div className="min-h-screen bg-gray-100 p-6">
         <div className="max-w-md mx-auto mt-20">
           <div className="flex items-center gap-4 mb-6">
             <button
@@ -173,10 +159,7 @@ export default function VaultView({ vaultName, onBack }: VaultViewProps) {
           />
           <button
             onClick={handleUnlock}
-            className={cx(
-              "w-full bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg transition-colors duration-200",
-              "flex justify-center items-center",
-            )}
+            className={cx(buttonClasses, "w-full")}
           >
             {unlockLoading && <Loading className="h-5 scale-50" />}
             {!unlockLoading && "Unlock"}
@@ -187,7 +170,7 @@ export default function VaultView({ vaultName, onBack }: VaultViewProps) {
   }
 
   return (
-    <div className="min-h-screen bg-white p-6">
+    <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
@@ -202,9 +185,7 @@ export default function VaultView({ vaultName, onBack }: VaultViewProps) {
           </div>
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className={cx(
-              "bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200",
-            )}
+            className={cx(buttonClasses)}
           >
             <FontAwesomeIcon icon={faPlus} />
             Add Password
@@ -233,16 +214,12 @@ export default function VaultView({ vaultName, onBack }: VaultViewProps) {
           {filteredPasswords.map((entry) => (
             <div
               key={entry.id}
-              className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-shadow duration-200"
+              className="bg-white border border-gray-200 rounded-xl p-4 transition-shadow duration-200"
             >
               <div className="flex justify-between items-start">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FontAwesomeIcon
-                      icon={faStickyNote}
-                      className="text-gray-400"
-                    />
-                    <div className="text-gray-600 whitespace-pre-wrap">
+                  <div className="flex items-start gap-4 mb-2">
+                    <div className="text-lg text-gray-600 whitespace-pre-wrap">
                       {entry.notes}
                     </div>
                   </div>
@@ -254,23 +231,14 @@ export default function VaultView({ vaultName, onBack }: VaultViewProps) {
                 </div>
                 <div className="flex gap-3 ml-4">
                   <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(entry.password);
-                      // TODO: Add toast notification
-                    }}
-                    className="text-gray-400 hover:text-sky-500 transition-colors duration-200"
-                  >
-                    <FontAwesomeIcon icon={faCopy} />
-                  </button>
-                  <button
                     onClick={() => setEditingPassword(entry)}
-                    className="text-gray-400 hover:text-sky-500 transition-colors duration-200"
+                    className={accentClasses}
                   >
                     <FontAwesomeIcon icon={faEdit} />
                   </button>
                   <button
                     onClick={() => setPasswordToDelete(entry)}
-                    className="text-gray-400 hover:text-red-500 transition-colors duration-200"
+                    className={accentClasses}
                   >
                     <FontAwesomeIcon icon={faTrash} />
                   </button>
@@ -286,7 +254,7 @@ export default function VaultView({ vaultName, onBack }: VaultViewProps) {
             <div className="bg-white rounded-xl p-6 w-full max-w-md">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold text-gray-800">
-                  Add Password
+                  Add A Password
                 </h2>
                 <button
                   onClick={() => setIsAddModalOpen(false)}
@@ -295,6 +263,7 @@ export default function VaultView({ vaultName, onBack }: VaultViewProps) {
                   <FontAwesomeIcon icon={faTimes} />
                 </button>
               </div>
+              <div className="mb-4 px-1">{glossary.password}</div>
 
               {error && (
                 <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
@@ -303,8 +272,8 @@ export default function VaultView({ vaultName, onBack }: VaultViewProps) {
               )}
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes
+                <label className="font-bold text-gray-700">
+                  <Documentation label="Notes" showLabel className="mb-2" />
                 </label>
                 <textarea
                   value={newNotes}
@@ -324,10 +293,7 @@ export default function VaultView({ vaultName, onBack }: VaultViewProps) {
                 </button>
                 <button
                   onClick={handleAddPassword}
-                  className={cx(
-                    "flex justify-center items-center w-[150px]",
-                    "px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors duration-200",
-                  )}
+                  className={cx(buttonClasses, "w-[150px]")}
                 >
                   {addPasswordLoading && <Loading className="h-5 scale-50" />}
                   {!addPasswordLoading && "Add Password"}
@@ -360,8 +326,8 @@ export default function VaultView({ vaultName, onBack }: VaultViewProps) {
               )}
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes
+                <label className="font-bold text-gray-700">
+                  <Documentation label="Notes" showLabel className="mb-2" />
                 </label>
                 <textarea
                   value={editingPassword.notes}
@@ -378,8 +344,8 @@ export default function VaultView({ vaultName, onBack }: VaultViewProps) {
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Password
+                <label className="font-bold text-gray-700">
+                  <Documentation label="Password" showLabel className="mb-2" />
                 </label>
                 <PasswordInput
                   value={editingPassword.password}
@@ -408,10 +374,7 @@ export default function VaultView({ vaultName, onBack }: VaultViewProps) {
                       editingPassword.notes,
                     )
                   }
-                  className={cx(
-                    "flex justify-center items-center w-[150px]",
-                    "px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors duration-200",
-                  )}
+                  className={cx(buttonClasses, "w-[150px]")}
                 >
                   {updatePasswordLoading && (
                     <Loading className="h-5 scale-50" />

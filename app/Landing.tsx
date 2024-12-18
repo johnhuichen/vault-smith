@@ -14,6 +14,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { invoke } from "@tauri-apps/api/core";
 import cx from "classnames";
 
+import { accentClasses, buttonClasses } from "@/components/lib/cssClasses";
+import Documentation from "@/components/widgets/Documentation";
 import Loading from "@/components/widgets/Loading";
 import PasswordInput from "@/components/widgets/PasswordInput";
 
@@ -47,8 +49,7 @@ function Landing({ onVaultSelect }: LandingProps) {
   const [updateVaultName, setUpdateVaultName] = useState("");
   const [updateOldMasterkey, setUpdateOldMasterkey] = useState("");
   const [updateNewMasterkey, setUpdateNewMasterkey] = useState("");
-  const [updateConfirmNewMasterkey, setUpdateConfirmNewMasterkey] =
-    useState("");
+  const [updateConfirmMasterkey, setUpdateConfirmMasterkey] = useState("");
   const [updateVaultLoading, setUpdateVaultLoading] = useState(false);
 
   const [renameModalOpen, setRenameModalOpen] = useState(false);
@@ -111,7 +112,7 @@ function Landing({ onVaultSelect }: LandingProps) {
         name: updateVaultName,
         oldMasterkey: updateOldMasterkey,
         newMasterkey: updateNewMasterkey,
-        confirmNewMasterkey: updateConfirmNewMasterkey,
+        confirmNewMasterkey: updateConfirmMasterkey,
       });
 
       setUpdateModalOpen(false);
@@ -151,7 +152,7 @@ function Landing({ onVaultSelect }: LandingProps) {
     setUpdateVaultName(vault.name);
     setUpdateOldMasterkey("");
     setUpdateNewMasterkey("");
-    setUpdateConfirmNewMasterkey("");
+    setUpdateConfirmMasterkey("");
     setUpdateModalOpen(true);
   };
 
@@ -168,7 +169,7 @@ function Landing({ onVaultSelect }: LandingProps) {
   };
 
   return (
-    <div className="min-h-screen bg-white p-6">
+    <div className="min-h-screen bg-gray-100 p-6">
       {/* Header */}
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
@@ -176,10 +177,7 @@ function Landing({ onVaultSelect }: LandingProps) {
             <FontAwesomeIcon icon={faGear} className="" />
             Vault Smith
           </h1>
-          <button
-            onClick={openCreateModal}
-            className="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200"
-          >
+          <button onClick={openCreateModal} className={buttonClasses}>
             <FontAwesomeIcon icon={faPlus} />
             New Vault
           </button>
@@ -207,7 +205,7 @@ function Landing({ onVaultSelect }: LandingProps) {
                     </h2>
                     <button
                       onClick={() => openRenameModal(vault)}
-                      className="text-gray-400 hover:text-sky-500 transition-colors duration-200"
+                      className={accentClasses}
                     >
                       <FontAwesomeIcon icon={faPencilAlt} />
                     </button>
@@ -215,13 +213,13 @@ function Landing({ onVaultSelect }: LandingProps) {
                   <div className="flex gap-3">
                     <button
                       onClick={() => openUpdateModal(vault)}
-                      className="text-gray-400 hover:text-sky-500 transition-colors duration-200"
+                      className={accentClasses}
                     >
                       <FontAwesomeIcon icon={faKey} />
                     </button>
                     <button
                       onClick={() => openDeleteModal(vault)}
-                      className="text-gray-400 hover:text-red-500 transition-colors duration-200"
+                      className={accentClasses}
                     >
                       <FontAwesomeIcon icon={faTrash} />
                     </button>
@@ -238,7 +236,7 @@ function Landing({ onVaultSelect }: LandingProps) {
                 </p>
                 <button
                   onClick={() => onVaultSelect(vault.name)}
-                  className="w-full bg-sky-50 hover:bg-sky-100 text-sky-600 py-2 rounded-lg transition-colors duration-200"
+                  className={cx(buttonClasses, "w-full")}
                 >
                   Open Vault
                 </button>
@@ -288,10 +286,7 @@ function Landing({ onVaultSelect }: LandingProps) {
                 >
                   Cancel
                 </button>
-                <button
-                  onClick={handleRenameVault}
-                  className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors duration-200"
-                >
+                <button onClick={handleRenameVault} className={buttonClasses}>
                   Rename
                 </button>
               </div>
@@ -305,7 +300,7 @@ function Landing({ onVaultSelect }: LandingProps) {
             <div className="bg-white rounded-xl p-6 w-full max-w-md">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold text-gray-800">
-                  Update master key
+                  Update <Documentation label="master key" showLabel />
                 </h2>
                 <button
                   onClick={() => {
@@ -345,8 +340,8 @@ function Landing({ onVaultSelect }: LandingProps) {
               </h2>
               <PasswordInput
                 placeholder="Enter a new master key"
-                value={updateConfirmNewMasterkey}
-                onChange={setUpdateConfirmNewMasterkey}
+                value={updateConfirmMasterkey}
+                onChange={setUpdateConfirmMasterkey}
                 className="mb-4"
               />
               <div className="flex justify-end gap-3">
@@ -360,10 +355,7 @@ function Landing({ onVaultSelect }: LandingProps) {
                 </button>
                 <button
                   onClick={handleUpdateVault}
-                  className={cx(
-                    "flex justify-center items-center w-[120px]",
-                    "px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors duration-200",
-                  )}
+                  className={cx(buttonClasses, "w-[120px]")}
                 >
                   {updateVaultLoading && <Loading className="h-5 scale-50" />}
                   {!updateVaultLoading && "Update"}
@@ -398,7 +390,9 @@ function Landing({ onVaultSelect }: LandingProps) {
                 </div>
               )}
 
-              <h2 className="font-bold text-gray-800 mb-1">Vault name</h2>
+              <h2 className="font-bold text-gray-800 mb-1">
+                Name of <Documentation label="vault" showLabel />
+              </h2>
               <input
                 type="text"
                 placeholder="Enter a name"
@@ -406,7 +400,9 @@ function Landing({ onVaultSelect }: LandingProps) {
                 onChange={(e) => setCreateVaultName(e.target.value)}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent mb-4"
               />
-              <h2 className="font-bold text-gray-800 mb-1">Master key</h2>
+              <h2 className="font-bold text-gray-800 mb-1">
+                <Documentation label="Master key" showLabel />
+              </h2>
               <PasswordInput
                 value={createMasterkey}
                 onChange={setCreateMasterkey}
@@ -414,7 +410,7 @@ function Landing({ onVaultSelect }: LandingProps) {
                 className="mb-4"
               />
               <h2 className="font-bold text-gray-800 mb-1">
-                Confirm Master key
+                Confirm master key
               </h2>
               <PasswordInput
                 value={createConfirmMasterkey}
