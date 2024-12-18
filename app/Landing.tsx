@@ -18,11 +18,13 @@ import Loading from "@/components/widgets/Loading";
 import PasswordInput from "@/components/widgets/PasswordInput";
 
 interface Vault {
+  file_path: string;
   name: string;
   metadata: VaultMetaData;
 }
 
 interface VaultMetaData {
+  file_path: string;
   created_at: string;
   last_accessed: string;
 }
@@ -155,8 +157,8 @@ function Landing({ onVaultSelect }: LandingProps) {
 
   const openRenameModal = (vault: Vault) => {
     setError("");
-    setRenameOldName(vault.name);
     setRenameNewName(vault.name);
+    setRenameOldName(vault.name);
     setRenameModalOpen(true);
   };
 

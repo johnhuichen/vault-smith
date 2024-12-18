@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import {
-  faArrowLeft,
+  faCircleLeft,
   faCopy,
   faEdit,
   faPlus,
@@ -130,9 +130,15 @@ export default function VaultView({ vaultId, onBack }: VaultViewProps) {
     return (
       <div className="min-h-screen bg-white p-6">
         <div className="max-w-md mx-auto mt-20">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
-            Unlock Vault
-          </h2>
+          <div className="flex items-center gap-4 mb-6">
+            <button
+              onClick={onBack}
+              className="text-2xl text-gray-600 hover:text-gray-800 transition-colors duration-200"
+            >
+              <FontAwesomeIcon icon={faCircleLeft} />
+            </button>
+            <h2 className="text-2xl font-bold text-gray-800">Unlock Vault</h2>
+          </div>
           {error && (
             <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
               {error}
@@ -163,9 +169,9 @@ export default function VaultView({ vaultId, onBack }: VaultViewProps) {
           <div className="flex items-center gap-4">
             <button
               onClick={onBack}
-              className="text-gray-600 hover:text-gray-800 transition-colors duration-200"
+              className="text-3xl text-gray-600 hover:text-gray-800 transition-colors duration-200"
             >
-              <FontAwesomeIcon icon={faArrowLeft} />
+              <FontAwesomeIcon icon={faCircleLeft} />
             </button>
             <h1 className="text-3xl font-bold text-gray-800">{vaultId}</h1>
           </div>
@@ -216,7 +222,6 @@ export default function VaultView({ vaultId, onBack }: VaultViewProps) {
                   <PasswordInput
                     value={entry.password}
                     onChange={() => {}}
-                    disabled
                     className="bg-gray-50"
                   />
                 </div>
